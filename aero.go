@@ -1,69 +1,66 @@
 package main
 
 import (
-	"log"
+	"fmt"
+	"time"
 
-	as "github.com/aerospike/aerospike-client-go/v6"
-	shared "github.com/aerospike/aerospike-client-go/v6/examples/shared"
+	"github.com/aerospike/aerospike-client-go/v5"
 )
 
 func main() {
-	runExample(shared.Client)
-	log.Println("Example finished successfully.")
+	// Connect to the Aerospike cluster
+	client, err := aerospike.NewClient("127.0.0.1", 3000)
+	if err != nil {
+		fmt.Printf("Error connecting to Aerospike: %v\n", err)
+		return
+	}
+
+	// Set namespace and set name
+	namespace := "test"
+	setName := "counter_table"
+
+	// Record key and bin name
+	//namespace: Represents the namespace in the Aerospike database where the record is located.
+	//recordKey:-Represents the actual key value for the specific record within the set, often a unique identifier.
+	key, _ := aerospike.NewKey(namespace, setName, "recordKey")
+
+	// Specifies the name of the bin as "exampleBin".
+	binName := "exampleBin"
+
+	// Define a sample record with an integer value
+	// Creates a map representing a sample record with a single bin named "exampleBin"
+	// and an initial integer value of 0.
+	record := aerospike.BinMap{
+		binName: 0,
+	}
+
+	// Start time for benchmarking
+	startTime := time.Now()
+
+	// Number of updates to perform in one second
+	updateCount := 0
+
+	fmt.Println("starting time: ", startTime)
+	// Run updates for one second
+	for time.Since(startTime) < time.Second {
+		// Increment the integer value in the bin
+		record[binName] = record[binName].(int) + 1
+
+		// Update the record
+		// It takes nil as the policy (indicating default policy), 
+		//the key (key) of the record to be updated, and the updated record (record).
+		err := client.Put(nil, key, record)
+		if err != nil {
+			fmt.Printf("Error updating record: %v\n", err)
+			return
+		}
+
+		// Increment update count
+		updateCount++
+	}
+
+	// Print benchmark results
+	fmt.Printf("Updates per second: %d\n", updateCount)
+	fmt.Println("ending time: ", time.Now())
 }
 
-func runExample(client *as.Client) {
-	key, err := as.NewKey(*shared.Namespace, *shared.Set, "addkey")
-	shared.PanicOnError(err)
-
-	binName := "addbin"
-
-	// Delete record if it already exists.
-	client.Delete(shared.WritePolicy, key)
-
-	// Perform some adds and check results.
-	bin := as.NewBin(binName, 10)
-	log.Println("Initial add will create record.  Initial value is ", bin.Value, ".")
-	client.AddBins(shared.WritePolicy, key, bin)
-
-	bin = as.NewBin(binName, 5)
-	log.Println("Add ", bin.Value, " to existing record.")
-	client.AddBins(shared.WritePolicy, key, bin)
-
-	record, err := client.Get(shared.Policy, key, bin.Name)
-	shared.PanicOnError(err)
-
-	if record == nil {
-		log.Fatalf(
-			"Failed to get: namespace=%s set=%s key=%s",
-			key.Namespace(), key.SetName(), key.Value())
-	}
-
-	// The value received from the server is an unsigned byte stream.
-	// Convert to an integer before comparing with expected.
-	received := record.Bins[bin.Name]
-	expected := 15
-
-	if received == expected {
-		log.Printf("Add successful: ns=%s set=%s key=%s bin=%s value=%s",
-			key.Namespace(), key.SetName(), key.Value(), bin.Name, received)
-	} else {
-		log.Fatalf("Add mismatch: Expected %d. Received %d.", expected, received)
-	}
-
-	// Demonstrate add and get combined.
-	bin = as.NewBin(binName, 30)
-	log.Println("Add ", bin.Value, " to existing record.")
-	record, err = client.Operate(shared.WritePolicy, key, as.AddOp(bin), as.GetOp())
-	shared.PanicOnError(err)
-
-	expected = 45
-	received = record.Bins[bin.Name]
-
-	if received == expected {
-		log.Printf("Add successful: ns=%s set=%s key=%s bin=%s value=%s",
-			key.Namespace(), key.SetName(), key.Value(), bin.Name, received)
-	} else {
-		log.Fatalf("Add mismatch: Expected %d. Received %d.", expected, received)
-	}
-}
