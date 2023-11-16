@@ -1,0 +1,93 @@
+package main
+
+import (
+	"fmt"
+	"sync"
+	"time"
+
+	"github.com/aerospike/aerospike-client-go/v5"
+)
+
+func updateRecord(client *aerospike.Client, key *aerospike.Key, binName string, writePolicy *aerospike.WritePolicy, wg *sync.WaitGroup, mutex *sync.Mutex, updateCount *int) {
+	defer wg.Done()
+
+	for {
+		mutex.Lock()
+		currentTime := time.Now()
+		mutex.Unlock()
+
+		if currentTime.Sub(startTime) >= time.Second {
+			break
+		}
+
+		// Increment the integer value in the bin
+		operation := aerospike.AddOp(aerospike.NewBin(binName, 1))
+		_, err := client.Operate(writePolicy, key, operation)
+
+		if err != nil {
+			fmt.Printf("Error updating record: %v\n", err)
+			return
+		}
+
+		// Increment update count
+		mutex.Lock()
+		*updateCount++
+		mutex.Unlock()
+	}
+}
+
+var startTime time.Time
+
+func main() {
+	// Connect to the Aerospike cluster
+	client, err := aerospike.NewClient("127.0.0.1", 3000)
+	if err != nil {
+		fmt.Printf("Error connecting to Aerospike: %v\n", err)
+		return
+	}
+
+	// Set namespace and set name
+	namespace := "test"
+	setName := "counter_table"
+
+	// Record key and bin name
+	key, _ := aerospike.NewKey(namespace, setName, "recordKey")
+
+	// Specifies the name of the bin as "exampleBin".
+	binName := "exampleBin"
+
+	// Creating a WritePolicy with strong consistency
+	writePolicy := aerospike.NewWritePolicy(0, 0)
+	// COMMIT_MASTER: write is committed on the master node before being acknowledged to the client.
+	writePolicy.CommitLevel = aerospike.COMMIT_ALL
+
+	// Start time for benchmarking
+	startTime = time.Now()
+
+	// Number of updates to perform in one second
+	updateCount := 0
+
+	// Mutex to synchronize access to shared resources
+	var mutex sync.Mutex
+
+	// WaitGroup to wait for goroutines to finish
+	var wg sync.WaitGroup
+
+	// Number of goroutines (threads)
+	numThreads := 16
+
+	fmt.Println("starting time: ", startTime)
+
+	// Start goroutines
+	for i := 0; i < numThreads; i++ {
+		wg.Add(1)
+		go updateRecord(client, key, binName, writePolicy, &wg, &mutex, &updateCount)
+	}
+
+	// Wait for all goroutines to finish
+	wg.Wait()
+
+	// Print benchmark results
+	fmt.Printf("Updates per second: %d\n", updateCount)
+	fmt.Println("ending time: ", time.Now())
+}
