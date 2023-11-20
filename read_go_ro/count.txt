@@ -1,0 +1,4 @@
+
+
+in psql database the count is 120-1350
+in Mongodb database the count is 7760

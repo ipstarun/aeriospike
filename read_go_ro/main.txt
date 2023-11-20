@@ -1,0 +1,135 @@
+// package main
+
+// import (
+// 	"database/sql"
+// 	"fmt"
+
+// 	_ "github.com/lib/pq"
+// )
+
+// const (
+// 	host     = "localhost"
+// 	port     = 5432
+// 	user     = "postgres"
+// 	password = "postgres"
+// 	dbname   = "threejoin"
+// )
+
+// func main() {
+// 	// connection string
+// 	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+
+// 	// open database
+// 	db, err := sql.Open("postgres", psqlconn)
+// 	CheckError(err)
+
+// 	// close database
+// 	defer db.Close()
+
+// 	// check db
+// 	err = db.Ping()
+// 	CheckError(err)
+
+// 	fmt.Println(" Datbase Connected!")
+
+// 	//Getting Data from the PSQL database
+// 	rows, err := db.Query(`SELECT "keydata", "val" FROM "godata"`)
+// 	CheckError(err)
+
+// 	defer rows.Close()
+// 	for rows.Next() {
+// 		var keydata string
+// 		var val string
+
+// 		err = rows.Scan(&keydata, &val)
+// 		CheckError(err)
+
+// 		fmt.Println(keydata, val)
+// 	}
+
+// 	CheckError(err)
+// }
+
+//	func CheckError(err error) {
+//		if err != nil {
+//			panic(err)
+//		}
+//	}
+
+// updaing the value only
+// package main
+
+// import (
+// 	"database/sql"
+// 	"fmt"
+
+// 	_ "github.com/lib/pq"
+// )
+
+// const (
+// 	host     = "localhost"
+// 	port     = 5432
+// 	user     = "postgres"
+// 	password = "postgres"
+// 	dbname   = "threejoin"
+// )
+
+// func main() {
+// 	psqlconn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+// 	db, err := sql.Open("postgres", psqlconn)
+// 	CheckError(err)
+// 	defer db.Close()
+// 	err = db.Ping()
+// 	CheckError(err)
+// 	fmt.Println("db -- Connected!")
+
+// 	// Define the update data
+// 	dataToUpdate := []struct {
+// 		Keydata string
+// 		NewVal  string
+// 	}{
+// 		{"k1", "new_value1"},
+// 		{"k2", "new_value2"},
+// 		{"k3", "new_value3"},
+// 		{"k4", "new_value4"},
+// 		{"k5", "new_value5"},
+// 		{"k6", "new_value6"},
+// 		{"k7", "new_value7"},
+// 	}
+
+// 	// Update the column data in a single loop
+// 	err = UpdateColumnData(db, dataToUpdate)
+// 	CheckError(err)
+// }
+
+// func UpdateColumnData(db *sql.DB, dataToUpdate []struct {
+// 	Keydata string
+// 	NewVal  string
+// }) error {
+// 	tx, err := db.Begin()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	defer tx.Rollback()
+
+// 	updateStmt := `UPDATE "godata" SET "val"=$1 WHERE "keydata"=$2`
+
+// 	for _, data := range dataToUpdate {
+// 		_, err := tx.Exec(updateStmt, data.NewVal, data.Keydata)
+
+// 		if err != nil {
+// 			fmt.Println("Error updating data:", err) // Print the error for debugging
+// 			return err
+// 		}
+// 	}
+// 	fmt.Println("update funcation1")
+
+// 	err = tx.Commit()
+// 	return err
+// }
+
+// func CheckError(err error) {
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// }
